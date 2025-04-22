@@ -1,0 +1,696 @@
+#Master menu
+menu "SenXor and board settings"
+
+	#SECTION 1 - SenXor Library customisation
+	menu "SenXor library"
+		comment "Adjust SenXor library settings and customise features"
+		choice MI_ESP_MODEL
+			prompt "ESP32S3 Board"
+			default ESPMODELS3_DevKitC1
+			help
+				The model of ESP32S3 development board. SPI Pins must be defined if Other is selected.
+			
+			config ESPMODELS3_DevKitC1
+				bool "ESP32S3 DevKitC-1 (ESP32S3 without LCD, Quad Mode PSRAM)"
+			config ESPMODEL_S3EYE
+				bool "ESP32S3 EYE (ESP32S3 with LCD, Octal Mode PSRAM)"
+			config ESPMODEL_S3MINI
+				bool "Meridian ESP32S3 Mini (Octal Mode PSRAM)"
+			config ESPMODEL_S3MINI_C
+				bool "Meridian ESP32S3 MINI Rev. C / Fire detector demo board (Octal Mode PSRAM)"
+			config ESPMODEL_S3_OTHER
+				bool "Other"				
+		endchoice	
+		
+		comment "Board specified settings"
+			depends on ESPMODELS3_DevKitC1 || ESPMODEL_S3EYE || ESPMODEL_S3MINI_C || ESPMODEL_S3_OTHER
+		
+
+		
+		comment "Use 4MHz clock generator. Noted that SenXorLib must change to 4MHz version for the best accuracy."	
+			depends on ESPMODELS3_DevKitC1 || ESPMODEL_S3EYE || ESPMODEL_S3MINI_C || ESPMODEL_S3_OTHER
+			
+		config MI_ONBOARD_CLK
+			depends on ESPMODELS3_DevKitC1 || ESPMODEL_S3EYE || ESPMODEL_S3MINI_C || ESPMODEL_S3_OTHER
+			bool "Enable onboard system clock generator"
+			default n
+			help
+			"Use internal 4MHz clock generator instead of external 3MHz crystal. Change SenXorLib to 4MHz version for the best accuracy."
+
+		choice MI_OP_MODE
+			prompt "ESP32 Operation mode"
+			default MI_OP_MODE_USER
+			config MI_OP_MODE_USER
+				bool "Configurable by user"
+				help
+					ESP32 will be operated in either USB and WiFi mode configurated by user.
+			config MI_OP_MODE_USB
+				bool "USB Mode"
+				help
+					ESP32 will be operated in USB mode
+			config MI_OP_MODE_WIFI
+				bool "WiFi Mode"
+				help
+					ESP32 will be operated in WiFi mode
+			help
+				ESP32 operation mode
+				Configurable by user: User decides whether the EVK worked in USB or WiFi mode
+				USB Mode: Bridge will communicate with the host via USB only
+				WiFi Mode: Bridge will communicate with the host via WiFi only
+		endchoice
+
+		#GPIO Pins define
+		comment "GPIO and SPI pins"
+			depends on ESPMODEL_S3_OTHER
+			
+		#Define GPIO and SPI pin connecting to SenXor.
+		#Avaliable only when board set to other
+		config MI_SENXOR_SPI_MOSI
+			depends on ESPMODEL_S3_OTHER
+			int	"GPIO to SenXor's SPI MISO (Master in salve out)"
+			range 0 40
+			default 0
+		help
+			SPI Pin to SenXor's MISO. Data from SenXor's will go to MCU from this pin.
+				
+		config MI_SENXOR_SPI_MISO
+			depends on ESPMODEL_S3_OTHER
+			int	"GPIO to SenXor's SPI MOSI (Master out salve in)"
+			range 0 40
+			default 0
+		help
+			SPI Pin to SenXor's MOSI. Data from MCU will go to SenXor from this pin.
+				
+		config MI_SENXOR_SPI_CLK
+			depends on ESPMODEL_S3_OTHER
+			int	"GPIO to SenXor's SPI CLK (Clock)"
+			range 0 40
+			default 0
+		help
+			SPI Pin to SenXor's CLK. This pin will provide SPI clock for communication.
+				
+		config MI_SENXOR_SPI_CS
+			depends on ESPMODEL_S3_OTHER
+			int	"GPIO to SenXor's SPI CS (Chip select)"
+			range -1 40
+			default 0
+			help
+				SPI Pin to SenXor's FIFO CS. This pin should be used in output mode.
+				
+		config MI_SENXOR_SPI_CS_FLASH
+			depends on ESPMODEL_S3_OTHER
+			int	"GPIO to SenXor FLASH SPI CS (Chip select)"
+			range -1 40
+			default 0	
+			help
+				SPI Pin to SenXor's FLASH CS. This pin should be used in output mode.
+		config MI_SENXOR_PIN_SYSCLK
+			depends on ESPMODEL_S3_OTHER && MI_ONBOARD_CLK
+			int	"GPIO to SenXor's CLK"
+			range 0 40
+			default 0
+			help
+				GPIO to SenXor's CLK. This pin should be used in output mode.
+						
+		config MI_SENXOR_PIN_RESET
+			depends on ESPMODEL_S3_OTHER 
+			int	"GPIO to SenXor's RESET"
+			range 0 40
+			default 0
+			help
+				GPIO to SenXor's RESET. This pin should be used in output mode.
+					
+		config MI_SENXOR_PIN_DATA_AV
+			depends on ESPMODEL_S3_OTHER
+			int	"GPIO to SenXor's DATA_AV"
+			range 0 40	
+			default 0
+			help
+				GPIO to SenXor's DATA_AV. This pin should be used in input mode.
+		
+		comment "SenXor"	
+		choice MI_SENXOR_MODEL
+			prompt "SenXor Model"
+			default COUGAR
+			help
+				Model of the SenXor
+			
+			config COUGAR
+				bool "Cougar"
+		endchoice
+		
+		config MI_SENXOR_MODEL
+			int
+			default 3 if COUGAR 
+		
+		config MI_SENXOR_START_CAP
+			bool "Start image capturing"
+			default false
+			help
+				"SenXor will start capturing immediately after the initialisation is completed even there is no client connected."
+								
+		config MI_SENXOR_AVG
+			int "SenXor frame averaging"
+			range 0 4
+			default 2
+			help
+				Configure the number of frame to be average during capturing.
+			
+		choice MI_SENXOR_FILTER
+		 	prompt "SenXor noise filtering"
+			default NOISE_FILTER_EN
+			help
+				Enable / disable Kalman filter. 
+			
+			config NOISE_FILTER_EN
+				bool "Enable Noise filter"
+		
+			config FILTER_DIS
+				bool "Disable noise filter"
+			
+		endchoice	
+		
+		config MI_SENXOR_FILTER_VAL
+			int
+			default 0 if FILTER_DIS
+			default 3 if NOISE_FILTER_EN
+		
+		comment "Debugging"
+		config MI_SENXOR_DBG
+			bool "Enable / disable SenXor log"
+			default n
+			help
+				Show SenXor's data on capturing.
+	endmenu
+	
+	#BluFi settings
+	menu "BluFi settings"
+		comment "BluFi settings"
+		depends on (BT_ENABLED) && (BT_BLUEDROID_ENABLED)
+		config MI_BFI_EN
+			bool "Enable BluFi"
+			default y
+			help
+				"Enable / disable BluFi. Enabling this features allow WiFi configurations can be done via Bluetooth using Android App."
+		
+		config MI_BFI_DEV_NAME
+			depends on MI_BFI_EN
+			string "BluFi device name"
+		    default "ESP32S3 BluFi"
+		    help
+				"BluFi device name. This will be broadcast to other Bluetooth devices for identification."
+				
+		config MI_BFI_DEV_NAME_SCFG
+			bool "Always use the device name in sdkconfig"
+			default n
+			help
+				"Always use the device name in sdkconfig. Even it is renamed by the client."			
+	endmenu
+	
+	menu "LED"
+		config MI_LED_EN
+			bool "Enable LED"
+			default y
+			help
+				Enable / disable LED on board.
+				
+		choice MI_LED_TYPE
+			depends on MI_LED_EN
+			prompt "LED Type"
+			default MI_LED_GPIO
+			config MI_LED_GPIO
+				bool "GPIO controlled LED"
+			config MI_LED_STRIP
+				depends on ESPMODELS3_DevKitC1 || ESPMODEL_S3EYE || ESPMODEL_S3_OTHER
+				bool "WS2812 LED Strip (RMT)"
+			config MI_LED_GPIO_STRIP
+				depends on (ESPMODELS3_DevKitC1 || ESPMODEL_S3EYE || ESPMODEL_S3_OTHER) && (CONFIG_SOC_RMT_SUPPORTED)
+				bool "GPIO controlled LED and WS2812 LED Strip (RMT)"
+			config MI_LED_OTHER
+				bool "Other"
+			help
+				LED type. 
+				GPIO controlled LED: Use binary output level or PWM to control LED(s). 
+				WS2812 LED Strip: Uses Remote Control Peripheral (RMT) on board to configure individual pixel on the strip
+				Other: Other type of LED. A customised initialisation function is required.		
+		endchoice
+		
+		config MI_GPIO_LED_ISMULTI
+			depends on MI_LED_GPIO || MI_LED_GPIO_STRIP || MI_LED_OTHER
+			bool "Multiple LEDs had connected to GPIO"
+			help
+				Enabled if multiple LEDs are installed.
+		
+		config MI_GPIO_LED_MAX
+			depends on MI_GPIO_LED_ISMULTI	
+			int "Number of LED to be controlled (Maximum 20)"
+			range 2 20
+			default 3
+		help
+			"Configure the maximum LEDs that connected to GPIO."
+			
+		
+		config MI_LED_TYPE_VAL
+			int
+			default 0 if MI_LED_GPIO
+			default 1 if MI_LED_STRIP
+			default 2 if MI_LED_GPIP_STRIP
+			default 3 if MI_LED_OTHER
+			
+	#LED pins	
+	
+					
+	#Advanced settings - PWM	
+		config MI_LED_PWM_EN
+			depends on MI_LED_GPIO || MI_LED_GPIO_STRIP
+			bool "Enable PWM"
+			help
+				Enable PWM controls to LED. 
+				When this option is enabled, LED control must be done via PWM function. 
+				This also enable advance LED control such as fading and brightness control.
+	
+		config MI_LED_PWM_FREQ
+			depends on MI_LED_PWM_EN
+			int "PWM frequency (Hz)"
+			range 1 50000
+			default 5000
+			help
+				PWM frequency. Refer to datasheet from LED manufacturer for correct setting.
+		
+		config MI_LED_PWM_INTI_DCYE
+			depends on MI_LED_PWM_EN
+			int "Initial duty cycle (in %)"
+			range 0 100
+			default 50
+			help
+				Initial PWM duty cycle when the device is boot up.
+				
+						
+	#RMT controlled LED (LED Strip)
+		config MI_LED_STRIP_PIN
+			depends on MI_LED_STRIP || MI_LED_GPIO_STRIP
+			int	"LED Pin to LED Strip"
+			range 0 40
+			default 0
+			help
+				GPIO number that LED strip is connected to.			
+		
+		config MI_LED_STRIP_LED_MAX
+			depends on MI_LED_STRIP || MI_LED_GPIO_STRIP
+			int	"Number of LED(s) in LED strip"
+			range 1 40
+			default 1
+			help
+				Total of LED installed on LED strip.
+		
+		choice MI_LED_STRIP_LED_FORMAT
+			prompt "LED Type"
+			depends on MI_LED_STRIP || MI_LED_GPIO_STRIP
+			default MI_LED_FORMAT_GRB
+			config MI_LED_FORMAT_GRB
+				bool "GRB"
+			config MI_LED_FORMAT_RGB
+				bool "RGB"
+			help
+				Pixel format used by LED strip	
+		endchoice
+		
+		config MI_LED_FORMAT_VAL
+			int
+			default 0 if MI_LED_FORMAT_GRB
+			default 1 if MI_LED_FORMAT_RGB
+		
+		config MI_LED_RMT_FREQ
+			depends on MI_LED_STRIP || MI_LED_GPIO_STRIP
+			int "RMT Frequency (Hz)"
+			default 10000000
+			range 1 50000000
+			help
+				Frequency (in Hz) of Remote Control Peripheral (RMT) to control LED strip. 
+				Refer to datasheet from LED manufacturer for correct setting.
+	endmenu
+	
+	#SECTION 2 - LCD customisation
+	#This section is enabled only when development board model is selected to ESP32S3 EYE or ESP32S3 DevKitC 
+	
+	menu "LCD"
+	depends on (ESPMODEL_S3EYE || ESPMODELS3_DevKitC1)
+		
+		#Main switch
+		config MI_LCD_EN
+			default n
+			bool "Enable LCD"
+			help
+				Enable or disable on board LCD. Only SPI LCD is supported.
+		
+		#LCD Type
+		choice MI_LCD_TYPE
+			depends on MI_LCD_EN
+			prompt "LCD model to be interfaced with"
+			default MI_ST7789
+			config MI_ST7789
+				bool "ST7789 240 x 240 1.4 IPS LCD"
+			config MI_GC9A01
+				bool "GC9A01 240 x 240 1.28 circle TFT"
+			config MI_OTHER
+				bool "Other SPI LCD"
+			help
+				LCD model to be interfaced with. ST7789 and GC9A01 have built-in drivers, while other LCD requires user to implement their own driver.
+		endchoice
+		
+		config MI_LCD_TYPE_VAL
+			int
+			default 0 if MI_ST7789
+			default 1 if MI_GC9A01
+			default 2 if MI_OTHER
+		
+		config MI_LCD_CUSTOM_PINS
+			depends on MI_LCD_EN
+			default n
+			bool "Customise pins"
+			help
+				Enable the customisation of LCD SPI Pins. If disabled, LCD pins will be pre-configurated according to ESP32 Model
+				
+	#LCD PWM backlight control	
+		config MI_LCD_BLK_PWM
+			depends on MI_LCD_EN
+			bool "Control LCD backlight via PWM"
+			default y 
+		help
+			"Enable LCD brightness adjustment via PWM. The blacklight pin of the LCD must be connected to PWM output in order to work."
+		
+		config MI_LCD_BLK_PWM_FREQ
+			depends on MI_LCD_BLK_PWM
+			int "PWM frequency (Hz)"
+			range 1 5000
+			default 1000
+		help
+			"PWM frequency (Hz) for controlling LCD brightness. Refers to the datasheet of LCD for a correct frequency."		
+		
+		config MI_LCD_BRIGHTNESS
+			depends on MI_LCD_BLK_PWM
+			int "Brightness (%)"
+			range 0 100
+			default 50
+		help
+			"Brightness of LCD when the device is boot. Set to 0 for minimum brightness, 100 for maximum brightness."
+	
+	#LCD SPI Pins
+		config MI_LCD_CLK
+			depends on MI_LCD_CUSTOM_PINS
+			int "GPIO to LCD SPI CLK"
+			default 0 
+			range 0 48
+			help
+				Configure clock pin (SPI CLK) for LCD
+				
+		config MI_LCD_MOSI
+			depends on MI_LCD_CUSTOM_PINS
+			int "GPIO to LCD SPI MOSI"
+			default 0
+			range 0 48
+			help
+				Configure data pin (SPI MOSI) for LCD.
+				
+		config MI_LCD_MISO
+			depends on MI_LCD_CUSTOM_PINS
+			int "GPIO to LCD SPI MISO"
+			range -1 48
+			default -1
+			help
+				Configure data pin (SPI MISO) for LCD. -1 to disable.
+				
+		config MI_LCD_CS
+			depends on MI_LCD_CUSTOM_PINS
+			int "GPIO to LCD SPI CS"
+			default 0
+			range 0 48
+			help
+				Configure chip select pin (SPI CS) for LCD
+				
+		config MI_LCD_BLK
+			depends on MI_LCD_CUSTOM_PINS
+			int "GPIO to LCD BLK"
+			default 0
+			range -1 48
+			help
+				Configure black light pin for LCD. Depends on the LCD model, a PWM signal can be provided for brightness control. -1 if the pin does not exists or to disable brightness control.
+				 
+		config MI_LCD_DC
+			depends on MI_LCD_CUSTOM_PINS
+			int "GPIO to LCD DC"
+			default 0
+			range 0 48
+			help
+				Configure data/command pin (DC) for LCD
+				
+		config MI_LCD_RST
+			depends on MI_LCD_CUSTOM_PINS
+			int "GPIO to LCD RST"
+			default 0
+			range -1 48
+			help
+				Configure reset pin (RST) for LCD. Enter -1 if not used.
+	
+	#Colour bits configuration	
+		choice MI_COLOUR_BIT
+			depends on MI_LCD_EN
+			prompt "Colour depth (bits)"
+			default MI_COLOUR_BIT_16
+			
+			config  MI_COLOUR_BIT_8
+				bool "8 bits colour"
+			config  MI_COLOUR_BIT_16
+				bool "High colour (16 bits)"
+			config MI_COLOUR_BIT_24
+				bool "True colour (24 bits)"
+		endchoice
+		
+		config MI_COLOUR_BIT_VAL
+			int
+			default 8 if MI_COLOUR_BIT_8
+			default 16 if MI_COLOUR_BIT_16
+			default 24 if MI_COLOUR_BIT_24
+	endmenu
+		
+	#	
+	# LCD settings ends
+	#
+	
+	#NVS
+	menu "Saved preferences"
+		config MI_NVS_CLR
+			bool "Clear NVS when the device is boot"
+			default n
+	    help
+	        If checked, the NVS partition will be erased when boot.
+	        User settings will therefore reset once reboot.
+	endmenu
+	
+	#	
+	# NVS settings ends
+	#
+	
+	menu "Network"
+			
+		#TCP customisation
+		
+		menu "TCP / UDP Settings"
+			comment "Settings for network socket. TCP is a default protocol for SenXorProViewer."
+			comment "UDP is current under developments and should not be used in deployment."
+			#Server (TCP / UDP Settings)		
+			choice MI_SER_MODE
+				prompt "Protocol"
+				default MI_SER_MODE_TCP
+				config MI_SER_MODE_TCP
+					bool "TCP"
+				config MI_SER_MODE_UDP
+					bool "UDP"
+				help
+					Select the operation mode of server.
+					TCP: Connection oriented protocol. Best for reliable connection.
+					UDP: Connectionless protocol. Best for fast and efficient connection.
+			endchoice
+			
+			config MI_TCP_PORT
+				int "Server port"
+				default 3333
+				range 1 65535
+				help
+					"Server port where the client will connect to."
+			
+			comment "TCP"
+			depends on MI_SER_MODE_TCP		
+			config MI_TCP_KEEPALIVE_EN
+				depends on MI_SER_MODE_TCP
+				bool "Enable / disable TCP keepalive feature"
+				default y
+				help
+					"Enable the sending of keep-alive messages on connection-oriented sockets."
+							
+			config MI_TCP_KEEPALIVE_IDLE
+				depends on MI_TCP_KEEPALIVE_EN
+				int "TCP Keepalive (idle) (in s)"
+				default 5
+				range 1 7200000
+				help
+					The duration between two keepalive transmissions in idle condition.
+					Default: 5ms
+					
+			config MI_TCP_KEEPALIVE_INTERVAL
+				depends on MI_TCP_KEEPALIVE_EN
+				int "TCP Keepalives interval (in s)"
+				default 5
+				range 1 7200000
+				help
+					Duration between two successive keepalive retransmissions.
+					Default: 5ms
+					
+			config MI_TCP_KEEPALIVE_COUNT
+				depends on MI_TCP_KEEPALIVE_EN
+				int "TCP Keepalives count (in s)"
+				default 3
+				range 1 7200000
+				help
+					Number of TCP Keepalives packet sent in each interval.
+					Default: 3
+			
+			#debug
+			comment "Debugging"
+			config MI_TCP_SERIALPRO_DBG
+				bool "Enable serial processor debug log"
+				default n
+				help
+					Show log when serial processor is phrasing incoming packet.
+			
+		endmenu
+		
+		
+		menu "WiFi"
+			comment "WiFi settings"
+			
+			config MI_WLAN_USE_NVS
+				bool "Use saved configuration in NVS"
+				default y
+				help
+					MCU will load the saved configuration from NVS. 
+					If this option is unchecked, WiFi driver will load the settings in sdkconfig.
+					If NVS is empty, WiFi task will use the configuration from sdkconfig.
+			
+			comment "WiFi Station mode"				
+			config ESP_WIFI_STA_SSID
+			    string "SSID"
+			    default "WLANAP_SSID"
+			    help
+					The SSID of an access point that ESP32S3 will connect to.
+			
+			config ESP_WIFI_STA_PASSWORD
+			    string "Password"
+			    default "WLANAP_PW"
+			    help
+					WiFi password (WPA or WPA2) for the example to use.
+					For security reason, always connects to an access point
+					with WPA2 encryption.
+			
+					
+			config ESP_MAXIMUM_RETRY
+				int "Maximum retry"
+				range 0 20
+				default 5
+				help
+			    	"Define the maximum number of retry when an attempt for connecting to access point is failed. The device will wait for user interaction when the maximum is reached."
+			    	
+			config ESP_WIFI_LISTEN_INTERVAL
+			    int "Listen interval (in 100ms)"
+			    default 3
+			    help
+				    Interval for station to listen to beacon from AP. The unit of listen interval is one beacon interval.
+				    For example, if beacon interval is 100 ms and listen interval is 3, the interval for station to listen
+				    to beacon is 300 ms. 
+			
+			comment "WiFi Hotspot (AP mode)"		        
+			config ESP_WIFI_AP_SSID
+			    string "Name"
+			    default "ESP32S3AP"
+			    help
+					SSID (network name) for this device when in AP mode.
+			
+			config ESP_WIFI_AP_PASSWORD
+			    string "Password"
+			    default "ESP32S3AP@1234"
+			    help
+					WiFi password for this device when in AP mode.
+					If this field is left blank, the WiFi will operate as open system. Traffic between client and ESP32S3 will be left unencrypted.
+					Otherwise, the WiFi will operate with WPA2-PSK authentication. 
+					For security reason, WiFi password should be configured with a strong password.   	
+					
+			config ESP_WIFI_AP_CHANNEL
+			    int "WiFi Channel (AP Mode)"	    
+			    range 1 13
+			    default 6
+			    help
+					Define the default WiFi channel in AP mode. (2.40GHz only)
+				
+			config ESP_MAX_STA_CONN
+				int "Maximum station connections (AP Mode)"
+				range 1 10
+				default 2
+				help
+			    	The maximum number of connections that the ESP32S3 will be accepted.
+			    	If the maximum is reached, the ESP32S3 will reject any new incoming connection.
+			    	
+			choice MI_WLAN_PWR_SAVE
+				prompt "WiFi Power saving mode"
+				default MI_WLAN_PWR_SAVE_MAX
+				config MI_WLAN_PWR_SAVE_MAX
+					bool "Maximum power saving"
+					help
+						Save more power without degrading a significant WiFi performance. 
+						The interval to receive beacons is determined by the listen_interval parameter in wifi_sta_config_t. (Default is 3)
+				config MI_WLAN_PWR_SAVE_MIN
+					bool "Minimum power saving"
+					help
+						Save power without degrading WiFi performance. Station wakes up to receive beacon every DTIM period
+				config MI_WLAN_PWR_SAVE_NONE
+					bool "Disabled"
+				help
+					Enable / disable WiFi power saving feature
+					Maximum power saving: WiFi will receive beacons every some interval defined in WiFi listen interval section.
+					Minimum power saving: WiFi will receive beacons every DTIM period defined by access point.
+					Disabled: Disable power saving feature. The WiFi will operate at full power.
+			endchoice
+			
+			config MI_WLAN_PWR_SAVE_VAL
+				int
+				default 2 if MI_WLAN_PWR_SAVE_MAX
+				default 1 if MI_WLAN_PWR_SAVE_MIN
+				default 0 if MI_WLAN_PWR_SAVE_NONE
+			
+			comment "Debugging"
+					
+			config MI_WLAN_MODE_FORCE
+				bool "WiFi always run in defined mode"
+				help
+					WiFi will launch in selected mode regardless of the WiFi operation mode that are configured previously.
+					
+			choice MI_WLAN_MODE
+				depends on MI_WLAN_MODE_FORCE
+				prompt "WiFi mode will always run in"
+				
+				config MI_WLAN_STA_FORCE
+					bool "Station Mode"
+				config MI_WLAN_AP_FORCE
+					bool "Hotspot (AP Mode)"
+				help
+					Select the operation mode of WiFi.
+					Station Mode: ESP32S3 connects to an wireless access point with specified SSID and password.
+					Hotspot (AP Mode): ESP32S3 acts as an access point		
+			endchoice
+			
+			config MI_WLAN_MODE_SEL
+				int
+				default 0 if MI_WLAN_STA
+				default 1 if MI_WLAN_AP
+		endmenu
+	endmenu
+endmenu

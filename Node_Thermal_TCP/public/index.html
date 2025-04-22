@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>ESP32 Thermal Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header>
+    <h1>🔥 ESP32 Real-Time Thermal Camera Viewer</h1>
+    <div id="status">Status: <span id="connStatus">Connecting...</span></div>
+  </header>
+
+  <div class="fullscreenWrapper">
+    <div class="frameContainer">
+      <div class="canvasWrapper">
+        <canvas id="thermalCanvas" width="80" height="62"></canvas>
+        <canvas id="overlayCanvas" width="800" height="620"></canvas>
+      </div>
+      <div class="rangeWrapper">
+        <div id="rangeIndicator"></div>
+        <div id="rangeMax" class="rangeLabel">--</div>
+        <div id="rangeMin" class="rangeLabel">--</div>
+      </div>
+    </div>
+  </div>
+
+
+  <canvas id="chartCanvas" width="820" height="200"></canvas>
+
+  <div class="controls">
+    <button onclick="saveScreenshot()">📷 Save PNG</button>
+    <button onclick="toggleFullscreen()">🖥 Fullscreen</button>
+    <button onclick="toggleFlip()">↔ Flip</button>
+
+    <select id="colorMap">
+      <option value="default">Default</option>
+      <option value="grayscale">Grayscale</option>
+      <option value="inferno">Inferno</option>
+      <option value="viridis">Viridis</option>
+      <option value="plasma">Plasma</option>
+      <option value="hot">Hot</option>
+      <option value="fireice">Fire & Ice</option>
+    </select>
+
+    <select id="tempUnit">
+      <option value="C">Celsius (°C)</option>
+      <option value="F">Fahrenheit (°F)</option>
+    </select>
+  </div>
+
+  <div id="hud">
+    FPS: <span id="fps">0</span><br>
+    Latency: <span id="latency">0</span> ms<br>
+    Frame #: <span id="frameNum">0</span>
+  </div>
+
+  <footer>
+    <p>&copy; 2025 That Project Vision Labs</p>
+  </footer>
+
+  <script>
+    const canvas = document.getElementById('thermalCanvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlayCanvas');
+    const overlayCtx = overlay.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const chartCanvas = document.getElementById('chartCanvas');
+    const chartCtx = chartCanvas.getContext('2d');
+
+    const statusEl = document.getElementById("connStatus");
+    const fpsEl = document.getElementById("fps");
+    const latencyEl = document.getElementById("latency");
+    const frameNumEl = document.getElementById("frameNum");
+    const colorMapSelect = document.getElementById("colorMap");
+    const tempUnitSelect = document.getElementById("tempUnit");
+    const rangeMinEl = document.getElementById("rangeMin");
+    const rangeMaxEl = document.getElementById("rangeMax");
+    const rangeIndicator = document.getElementById("rangeIndicator");
+
+    const socket = new WebSocket('ws://' + location.host);
+    socket.binaryType = 'arraybuffer';
+
+    let lastFrameTime = performance.now();
+    let lastMessageTime = Date.now();
+    let frameCount = 0;
+    let flipHorizontally = false;
+
+    const TIMEOUT_MS = 5000;
+
+    setInterval(() => {
+      if (Date.now() - lastMessageTime > TIMEOUT_MS && statusEl.textContent === "Connected") {
+        statusEl.textContent = "Disconnected";
+        statusEl.style.color = "#ff5555";
+      }
+    }, 1000);
+
+    socket.onopen = () => {
+      lastMessageTime = Date.now();
+      statusEl.textContent = "Connected";
+      statusEl.style.color = "#00ff99";
+    };
+
+    socket.onclose = () => {
+      statusEl.textContent = "Disconnected";
+      statusEl.style.color = "#ff5555";
+    };
+
+    function toggleFlip() {
+      flipHorizontally = !flipHorizontally;
+    }
+
+    function rawToCelsius(raw) {
+      return raw * 0.0984 - 265.82;
+    }
+
+    function convertTemp(raw, unit) {
+      const tempC = rawToCelsius(raw);
+      return unit === 'F' ? (tempC * 9 / 5 + 32) : tempC;
+    }
+
+    function updateColorGradient(map) {
+      let gradient;
+      switch (map) {
+        case 'grayscale':
+          gradient = 'linear-gradient(to top, black, white)';
+          break;
+        case 'inferno':
+          gradient = 'linear-gradient(to top, #000004, #420a68, #932667, #dd513a, #fca50a, #fcffa4)';
+          break;
+        case 'viridis':
+          gradient = 'linear-gradient(to top, blue, green)';
+          break;
+        case 'plasma':
+          gradient = 'linear-gradient(to top, #9946eb, red)';  // updated min color
+          break;
+        case 'hot':
+          gradient = 'linear-gradient(to top, black, green, yellow, white)';
+          break;
+        case 'fireice':
+          gradient = 'linear-gradient(to top, blue, yellow)';
+          break;
+        default:
+          gradient = 'linear-gradient(to top, blue, red)';
+          break;
+      }
+      rangeIndicator.style.background = gradient;
+      updateRangeLabelColors(map);
+    }
+
+    function updateRangeLabelColors(map) {
+      const minColor = {
+        default: "blue",
+        grayscale: "black",
+        inferno: "#000004",
+        viridis: "blue",
+        plasma: "#9946eb",      // updated to RGB(153, 70, 235)
+        hot: "black",
+        fireice: "blue"
+      };
+
+      const maxColor = {
+        default: "red",
+        grayscale: "white",
+        inferno: "#fcffa4",
+        viridis: "green",
+        plasma: "red",
+        hot: "white",
+        fireice: "yellow"
+      };
+
+      rangeMinEl.style.color = minColor[map];
+      rangeMaxEl.style.color = maxColor[map];
+    }
+
+    colorMapSelect.addEventListener('change', () => {
+      updateColorGradient(colorMapSelect.value);
+    });
+
+    const tempChart = new Chart(chartCtx, {
+      type: 'line',
+      data: {
+        labels: Array(50).fill(''),
+        datasets: [
+          { label: 'Min Temp', data: Array(50).fill(0), borderColor: 'orange', tension: 0.1 },
+          { label: 'Max Temp', data: Array(50).fill(0), borderColor: 'red', tension: 0.1 }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: false }
+        }
+      }
+    });
+
+    function saveScreenshot() {
+      const link = document.createElement('a');
+      link.download = 'thermal-frame.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    function toggleFullscreen() {
+      // if (!document.fullscreenElement) {
+      //   canvas.requestFullscreen();
+      // } else {
+      //   document.exitFullscreen();
+      // }
+
+      const container = document.querySelector('.frameContainer'); // Includes canvas + range indicator
+      if (!document.fullscreenElement) {
+        container.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    socket.onmessage = (event) => {
+      lastMessageTime = Date.now();
+      const now = performance.now();
+      const latency = now - lastFrameTime;
+      lastFrameTime = now;
+
+      fpsEl.textContent = Math.round(1000 / latency);
+      latencyEl.textContent = latency.toFixed(0);
+      frameNumEl.textContent = ++frameCount;
+
+      const data = new Uint16Array(event.data);
+      const minRaw = Math.min(...data);
+      const maxRaw = Math.max(...data);
+      const range = maxRaw - minRaw || 1;
+      const unit = tempUnitSelect.value;
+
+      const maxIndexRaw = data.indexOf(maxRaw);
+      const rawX = maxIndexRaw % width;
+      const rawY = Math.floor(maxIndexRaw / width);
+      const maxX = flipHorizontally ? (width - 1 - rawX) : rawX;
+      const maxY = rawY;
+      const scaleX = 10, scaleY = 10;
+
+      const minTemp = convertTemp(minRaw, unit);
+      const maxTemp = convertTemp(maxRaw, unit);
+
+
+
+
+      rangeMinEl.textContent = `${minTemp.toFixed(1)} °${unit}`;
+      rangeMaxEl.textContent = `${maxTemp.toFixed(1)} °${unit}`;
+
+
+      const imageData = ctx.createImageData(width, height);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const srcX = flipHorizontally ? (width - 1 - x) : x;
+          const srcIndex = y * width + srcX;
+          const destIndex = y * width + x;
+
+          const norm = Math.floor(((data[srcIndex] - minRaw) / range) * 255);
+          let r = norm, g = 0, b = 255 - norm;
+
+          switch (colorMapSelect.value) {
+            case 'grayscale':
+              r = g = b = norm;
+              break;
+            case 'inferno':
+              r = norm;
+              g = Math.floor(norm * 0.2);
+              b = 50;
+              break;
+            case 'viridis':
+              r = norm * 0.1;
+              g = norm;
+              b = 255 - norm;
+              break;
+            case 'plasma':
+              r = 255 - norm * 0.4;
+              g = norm * 0.3;
+              b = norm;
+              break;
+            case 'hot':
+              r = norm;
+              g = Math.min(255, norm * 1.5);
+              b = Math.min(255, norm * 0.6);
+              break;
+            case 'fireice':
+              r = norm;
+              g = norm;
+              b = 255 - norm;
+              break;
+          }
+
+          imageData.data[destIndex * 4 + 0] = r;
+          imageData.data[destIndex * 4 + 1] = g;
+          imageData.data[destIndex * 4 + 2] = b;
+          imageData.data[destIndex * 4 + 3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+      overlayCtx.beginPath();
+      overlayCtx.arc(maxX * scaleX, maxY * scaleY, 8, 0, 2 * Math.PI);
+      overlayCtx.strokeStyle = 'yellow';
+      overlayCtx.lineWidth = 2;
+      overlayCtx.stroke();
+      overlayCtx.font = '16px monospace';
+      overlayCtx.fillStyle = 'yellow';
+      overlayCtx.fillText(maxTemp.toFixed(1) + '°' + unit, maxX * scaleX + 10, maxY * scaleY - 10);
+
+      tempChart.data.datasets[0].data.push(minTemp);
+      tempChart.data.datasets[1].data.push(maxTemp);
+      if (tempChart.data.datasets[0].data.length > 50) {
+        tempChart.data.datasets[0].data.shift();
+        tempChart.data.datasets[1].data.shift();
+      }
+      tempChart.update();
+    };
+  </script>
+</body>
+
+</html>

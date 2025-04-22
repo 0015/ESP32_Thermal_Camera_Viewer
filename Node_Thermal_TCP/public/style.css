@@ -1,0 +1,192 @@
+body {
+  background: #111;
+  color: #fff;
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  padding: 10px 0;
+  text-align: center;
+}
+
+#status span.online {
+  color: #00ff99;
+  font-weight: bold;
+}
+
+.frameContainer {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  margin-top: 10px;
+}
+
+.canvasWrapper {
+  position: relative;
+  width: 800px;
+  height: 620px;
+}
+
+canvas#thermalCanvas {
+  image-rendering: pixelated;
+  width: 800px;
+  height: 620px;
+  border: 2px solid #444;
+}
+
+canvas#overlayCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 800px;
+  height: 620px;
+  pointer-events: none;
+}
+
+.rangeWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 620px;
+  margin-top: 2px;
+  margin-left: 20px;
+}
+
+#rangeIndicator {
+  height: 100%;
+  width: 20px;
+  border: 1px solid #444;
+  background: linear-gradient(to top, blue, red);
+}
+
+.rangeLabel {
+  position: absolute;
+  left: 30px;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  /* ✅ Prevent line breaks */
+  line-height: 1;
+  /* ✅ Keep it compact */
+}
+
+
+#rangeMax {
+  top: 0;
+}
+
+#rangeMin {
+  bottom: 0;
+}
+
+#chartCanvas {
+  display: block;
+  margin-top: 20px;
+  border: 2px solid #444;
+}
+
+.controls {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+button,
+select {
+  background-color: #222;
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+  height: 42px;
+  min-width: 140px;
+  box-sizing: border-box;
+  cursor: pointer;
+  text-align: center;
+  text-align-last: center;
+}
+
+button:hover {
+  background-color: #00ffcc;
+  color: #111;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 14px;
+  color: #00ffcc;
+  z-index: 1000;
+}
+
+footer {
+  margin-top: 20px;
+  padding: 10px;
+  font-size: 12px;
+  color: #888;
+}
+
+:fullscreen body {
+  overflow: hidden;
+}
+
+:fullscreen .fullscreenWrapper {
+width: 100vw;
+height: 100vh;
+padding: 40px;
+box-sizing: border-box;
+background: #111;
+display: flex;
+justify-content: center;
+align-items: center;
+}
+
+:fullscreen .frameContainer {
+display: flex;
+gap: 20px;
+align-items: center;
+}
+
+
+:fullscreen .canvasWrapper {
+  aspect-ratio: 80 / 62;
+  height: 90vh;
+  width: auto;
+  position: relative;
+}
+
+:fullscreen canvas#thermalCanvas,
+:fullscreen canvas#overlayCanvas {
+  height: 100%;
+  width: auto;
+}
+
+:fullscreen .rangeWrapper {
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+:fullscreen #rangeIndicator {
+  width: 20px;
+  height: 100%;
+}
